@@ -69,7 +69,6 @@ class EnterDataWindow(QWidget):
                 self.numberplantedList.append(int(self.numberplanted.text()))
                 self.seasonsList.append(str(self.seasonsBox.currentText()))
                 self.yearsList.append(str(self.yearsBox.currentText()))
-                self.seasonsBox.setEnabled(False)
                 self.yearsBox.setEnabled(False)
                 break
             if character == " ":
@@ -79,7 +78,6 @@ class EnterDataWindow(QWidget):
                 self.numberplantedList.append(int(self.numberplanted.text()))
                 self.seasonsList.append(str(self.seasonsBox.currentText()))
                 self.yearsList.append(str(self.yearsBox.currentText()))
-                self.seasonsBox.setEnabled(False)
                 self.yearsBox.setEnabled(False)
                 self.textbox.setText("")
                 self.numberplanted.setText("")
@@ -100,8 +98,7 @@ class EnterDataWindow(QWidget):
         print(dataframe)
         year = str(self.yearsList[0])
         season = str(self.seasonsList[0])
-        dataframe.to_csv("files/{year}-{season}.csv".format(year=year, season=season))
-        self.seasonsBox.setEnabled(True)
+        dataframe.to_csv("files/{year}.csv".format(year=year))
         self.yearsBox.setEnabled(True)
 
     def googleveg(self):
@@ -129,6 +126,11 @@ class EnterDataWindow(QWidget):
                 self.vegfamilyList.append("Gourds")
             elif vegetable == "Apiaceae":
                 self.vegfamilyList.append("Carrot")
+            elif vegetable == "Brassicaceae":
+                self.vegfamilyList.append("Brassica")
+            elif vegetable == "chenopodiaceae":
+                self.vegfamilyList.append("Chenopodiaceae")
+
 
 
 class ViewDataWindow(QWidget):
@@ -136,22 +138,16 @@ class ViewDataWindow(QWidget):
         super().__init__()
         self.setWindowTitle("View Vegetable Data")
         self.layout = QGridLayout()
-        self.seasons = ["Winter", "Spring", "Summer", "Autumn"]
         self.dataFrame = None
 
         self.label = QLabel("Choose year and\nseason to view: ")
         self.layout.addWidget(self.label, 0, 0)
 
-        self.seasonsBox = QComboBox()
-        for s in self.seasons:
-            self.seasonsBox.addItem(s)
-        self.layout.addWidget(self.seasonsBox, 0, 1)
-
         self.yearsBox = QComboBox()
         for i in range(100):
             i = i + 2000
             self.yearsBox.addItem(str(i))
-        self.layout.addWidget(self.yearsBox, 0, 2)
+        self.layout.addWidget(self.yearsBox, 0, 1)
 
         self.submitButton = QPushButton("Get data", self)
         self.submitButton.clicked.connect(self.loaddata)
@@ -160,15 +156,21 @@ class ViewDataWindow(QWidget):
         self.setLayout(self.layout)
 
     def loaddata(self):
-        year = self.yearsBox.currentText()
-        season = self.seasonsBox.currentText()
-        file = "files/{year}-{season}.csv".format(year=year, season=season)
-        dataframe = read_csv(file)
-        self.dataFrame = dataframe
-        print(self.dataFrame)
-        self.showdata()
+        try:
+            year = self.yearsBox.currentText()
+            file = "files/{year}.csv".format(year=year)
+            dataframe = read_csv(file)
+            self.dataFrame = dataframe
+            self.showdata()
+        except:
+            print("File Not Found")
 
     def showdata(self):
+        for i in reversed(range(self.layout.count())):
+            self.layout.itemAt(i).widget().setParent(None)
+        self.layout.addWidget(self.label, 0, 0)
+        self.layout.addWidget(self.submitButton, 1, 1)
+        self.layout.addWidget(self.yearsBox, 0, 1)
         for i, j in enumerate(self.dataFrame.columns):
             label = QLabel(str(j))
             self.layout.addWidget(label, 3, i)
@@ -181,7 +183,120 @@ class PredictWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Predict")
+        self.algorithmsList = ["Simple"]
+        self.vegFamilyList = ["Solanaceae", "Asteraceae", "Amaryllidaceae", "Fabaceae", "Cucurbitaceae", "Apiaceae", "Brassicaceae", "Chenopodiaceae"]
         self.layout = QGridLayout()
+
+        self.label = QLabel("What year do you want to predict: ")
+        self.layout.addWidget(self.label, 0, 0)
+
+        self.yearsBox = QComboBox()
+        for i in range(100):
+            i = i + 2000
+            self.yearsBox.addItem(str(i))
+        self.layout.addWidget(self.yearsBox, 0, 1)
+
+        self.label2 = QLabel("Choose algorithm: ")
+        self.layout.addWidget(self.label2, 1, 0)
+
+        self.algorithmBox = QComboBox()
+        for alg in self.algorithmsList:
+            self.algorithmBox.addItem(alg)
+        self.layout.addWidget(self.algorithmBox, 1, 1)
+
+        self.predButton = QPushButton("Predict")
+        self.predButton.clicked.connect(self.predict)
+        self.layout.addWidget(self.predButton, 2, 0, 1, 2)
+
+        self.setLayout(self.layout)
+
+    def predict(self):
+        algorithm = self.algorithmBox.currentText()
+        if algorithm == "Simple":
+            year = self.yearsBox.currentText()
+            prevyear = str(int(year) - 1)
+            nextyear = str(int(year) + 1)
+
+            try:
+                file = "files/{year}.csv".format(year=prevyear)
+                dataframe = read_csv(file)
+                print(dataframe)
+
+            except:
+                print("File Not Found, possible no previous year try again")
+
+            winter = dataframe[dataframe.loc[:, "Season Planted"] == "Winter"]
+            spring = dataframe[dataframe.loc[:, "Season Planted"] == "Spring"]
+            summer = dataframe[dataframe.loc[:, "Season Planted"] == "Summer"]
+            autumn = dataframe[dataframe.loc[:, "Season Planted"] == "Autumn"]
+
+            winterfamily = winter.loc[:, "Vegetable Family"].items()
+            winterFamilyList = []
+            for i, j in winterfamily:
+                winterFamilyList.append(j)
+            winterplantnextyear = []
+            for i in self.vegFamilyList:
+                if i in winterFamilyList:
+                    pass
+                else:
+                    winterplantnextyear.append(i)
+
+            if winterFamilyList == []:
+                winterFamilyList = [""]
+
+            springfamily = spring.loc[:, "Vegetable Family"].items()
+            springFamilyList = []
+            for i, j in springfamily:
+                springFamilyList.append(j)
+            springplantnextyear = []
+            for i in self.vegFamilyList:
+                if i in springFamilyList:
+                    pass
+                else:
+                    springplantnextyear.append(i)
+
+            if springFamilyList == []:
+                springFamilyList = [""]
+
+            summerfamily = summer.loc[:, "Vegetable Family"].items()
+            summerFamilyList = []
+            for i, j in summerfamily:
+                summerFamilyList.append(j)
+            summerplantnextyear = []
+            for i in self.vegFamilyList:
+                if i in summerFamilyList:
+                    pass
+                else:
+                    summerplantnextyear.append(i)
+
+            if summerFamilyList == []:
+                summerFamilyList = [""]
+
+            autumnfamily = autumn.loc[:, "Vegetable Family"].items()
+            autumnFamilyList = []
+            for i, j in autumnfamily:
+                autumnFamilyList.append(j)
+            autumnplantnextyear = []
+            for i in self.vegFamilyList:
+                if i in autumnFamilyList:
+                    pass
+                else:
+                    autumnplantnextyear.append(i)
+
+            if autumnFamilyList == []:
+                autumnFamilyList = [""]
+
+            output = f"In the winter of {prevyear} you planted {set(winterFamilyList)}" \
+                          f", so in the winter of {year}, you should plant {winterplantnextyear}. In the" \
+                          f"spring of {prevyear} you planted {set(springFamilyList)}, so in the spring of {year}," \
+                          f"you should plant {springplantnextyear}. In the summer of {prevyear} you planted {set(summerFamilyList)}," \
+                     f"so in the spring of {year}, you should plant {summerplantnextyear}. Finally in the autumn of {prevyear}" \
+                     f"you planted {set(autumnFamilyList)}, so in the spring of {year}, you should plant {autumnplantnextyear}"
+
+            outputlabel = QLabel(output)
+            outputlabel.setWordWrap(True)
+
+            self.layout.addWidget(outputlabel, 3, 0)
 
 class centraltab(QTabWidget):
     def __init__(self, parent=None):
