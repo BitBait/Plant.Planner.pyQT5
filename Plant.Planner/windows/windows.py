@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import *
 from windows.web import fetch
 from pandas import DataFrame, read_csv
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 brassicas = ["broccoli", "cauliflower", "brussel sprouts", "kale", "kohl rabi", "collards", "turnip",
              "mustard greens", "asian greens", "bok choi", "radish"]
@@ -298,6 +300,57 @@ class PredictWindow(QWidget):
 
             self.layout.addWidget(outputlabel, 3, 0)
 
+        # elif algorithm == "Complex":
+
+
+class PlotWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Plots")
+        self.plots = ["Simple Summary"]
+        self.layout = QGridLayout()
+        self.dataFrame = None
+        self.plot = None
+
+        self.label = QLabel("Choose year and\nseason to view: ")
+        self.layout.addWidget(self.label, 0, 0)
+
+        self.yearsBox = QComboBox()
+        for i in range(100):
+            i = i + 2000
+            self.yearsBox.addItem(str(i))
+        self.layout.addWidget(self.yearsBox, 0, 1)
+
+        self.submitButton = QPushButton("Get data", self)
+        self.submitButton.clicked.connect(self.loaddata)
+        self.layout.addWidget(self.submitButton, 1, 1)
+
+        self.plottype = QComboBox()
+        for i in self.plots:
+            self.plottype.addItem(i)
+        self.layout.addWidget(self.plottype, 0, 2)
+
+        self.plotthedata = QPushButton("Plot Data")
+        self.plotthedata.clicked.connect(self.plotdata)
+        self.layout.addWidget(self.plotthedata, 1, 2)
+
+        self.setLayout(self.layout)
+
+    def loaddata(self):
+        try:
+            year = self.yearsBox.currentText()
+            file = "files/{year}.csv".format(year=year)
+            dataframe = read_csv(file)
+            self.dataFrame = dataframe
+        except:
+            print("File Not Found")
+
+    def plotdata(self):
+        self.plot = self.plottype.currentText()
+        if self.plot == "Simple Summary":
+            myplot = sns.barplot(data=self.dataFrame, x="Season Planted", y="Number Planted", hue="Vegetable")
+            plt.show()
+
 class centraltab(QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -305,7 +358,9 @@ class centraltab(QTabWidget):
         self.tab1 = EnterDataWindow()
         self.tab2 = ViewDataWindow()
         self.tab3 = PredictWindow()
+        self.tab4 = PlotWindow()
 
         self.addTab(self.tab1, self.tab1.windowTitle())
         self.addTab(self.tab2, self.tab2.windowTitle())
         self.addTab(self.tab3, self.tab3.windowTitle())
+        self.addTab(self.tab4, self.tab4.windowTitle())
